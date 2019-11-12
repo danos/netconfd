@@ -1,0 +1,3 @@
+yang/vyatta-service-netconf-callhome-v1.yang usr/share/configd/yang
+templates opt/vyatta/share/vyatta-op
+tmplscripts/service/netconf/callhome_end.sh /opt/vyatta/share/tmplscripts/service/netconf

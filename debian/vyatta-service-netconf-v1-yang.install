@@ -1,0 +1,2 @@
+yang/vyatta-service-netconf-v1.yang /usr/share/configd/yang
+tmplscripts/service/netconf/configd_update /opt/vyatta/share/tmplscripts/service/netconf

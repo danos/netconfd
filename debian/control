@@ -1,0 +1,63 @@
+Source: netconfd
+Section: contrib/net
+Priority: optional
+Maintainer: Vyatta Package Maintainers <DL-vyatta-help@att.com>
+Build-Depends: debhelper (>= 9),
+ cpputest,
+ debhelper (>= 9.20160709) | dh-systemd (>= 1.5),
+ dh-yang,
+ libevent-dev,
+ libnetconf-dev (>= 0.10.0),
+ libssh-dev,
+ liburiparser-dev,
+ libvyatta-cfg-dev (>= 0.122),
+ libvyatta-util-dev,
+ libxml2-dev
+Standards-Version: 3.9.6
+
+Package: vyatta-netconf-agent
+Architecture: any
+Depends: ${misc:Depends},
+ ${shlibs:Depends}
+Conflicts: netconfd
+Description: Netconf daemon
+ A Netconf server built on libnetconf.
+
+Package: vyatta-service-netconf-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Dpends},
+ vyatta-netconf-agent (>= ${source:Version}),
+ vyatta-cfg
+Description: vyatta-service-netconf module
+ The YANG module for vyatta-service-netconf
+
+Package: vyatta-service-netconf-routing-instance-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Dpends},
+ vyatta-service-netconf-v1-yang (>= ${source:Version}),
+ vyatta-cfg
+Description: vyatta-service-netconf-routing-instance module
+ The YANG module for Vyatta NETCONF routing instance
+ configuration and operation.
+
+Package: vyatta-service-netconf-callhome-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends},
+ netconf-callhome-client,
+ vyatta-cfg
+Description: vyatta-service-netconf-callhome module
+ The YANG module for vyatta-service-netconf-callhome
+
+Package: netconf-callhome-client
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends},
+ libvyatta-cfgclient-perl,
+ vyatta-netconf-agent
+Description: NETCONF Call-home client
+ NETCONF Call-home client built on libnetconf.
+
+Package: netconf-callhome-server
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: NETCONF Call-home server
+ NETCONF Call-home server built on libnetconf.

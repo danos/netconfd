@@ -1,0 +1,2 @@
+help: Call-home status
+run: call-home --status

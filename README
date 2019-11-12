@@ -1,0 +1,7 @@
+The Debian Package netconfd
+---------------------------------
+
+A netconf server built on libnetconf
+
+ -- John Southworth <john.southworth@vyatta.com> Thu, 15 May 2014
+

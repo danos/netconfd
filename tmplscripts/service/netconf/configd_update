@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# set service netconf
+# set routing routing-instance blue service netconf
+#
+# When setting 'set service netconf' we enable netconf on the default vrf.
+
+for option in "$@"; do
+    case $option in
+        --routing-instance=*)
+            VRFName="${option#*=}"
+            shift
+            ;;
+        --action=*)
+            action="${option#*=}"
+            shift
+            ;;
+        *)
+            echo "netconf: unknown option"
+            ;;
+    esac
+done
+
+: ${VRFName:="default"}
+
+if [[ "$VRFName" != "default" ]]; then
+    sshd_pid=`pgrep -x -f "/usr/sbin/sshd -D -f /run/ssh/vrf/$VRFName/sshd_config"`
+else
+    sshd_pid=`pgrep -x -f "/usr/sbin/sshd -D"`
+fi
+
+if [[ "$action" == "delete" ]]; then
+    for p in $(pidof netconfd); do
+        while [ "$p" != "1" ]; do
+            pid=$p
+            p=`cut -d" " -f 4 /proc/${p}/stat`
+            if [[ "$sshd_pid" == "$p" ]]; then
+                pkill -TERM -P $pid
+                break
+            fi
+        done
+    done
+fi
+
+if [[ "$VRFName" != "default" ]]; then
+    vyatta-update-ssh.pl --cli-path="routing routing-instance $VRFName " \
+        --update=/run/ssh/vrf/$VRFName/sshd_config
+    systemctl reload-or-restart sshd@${VRFName}.service
+else
+    vyatta-update-ssh.pl --update=/etc/ssh/sshd_config
+    systemctl reload-or-restart ssh
+fi

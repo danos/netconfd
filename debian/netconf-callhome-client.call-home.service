@@ -1,0 +1,11 @@
+[Unit]
+Description=Call-home service
+Requires=multi-user.target
+After=multi-user.target
+
+[Service]
+ExecStart=/opt/vyatta/sbin/call-home
+RemainAfterExit=yes
+
+[Install]
+RequiredBy=multi-user.target

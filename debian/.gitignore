@@ -1,0 +1,9 @@
+/files
+/*.debhelper.log
+/*.debhelper
+/*.substvars
+/netconf-callhome-client/
+/netconf-callhome-server/
+/vyatta-netconf-agent/
+/vyatta-service-netconf-callhome-v1-yang/
+/vyatta-service-netconf-v1-yang/

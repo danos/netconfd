@@ -1,0 +1,104 @@
+#!/usr/bin/perl
+
+# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+#
+# Copyright (c) 2015-2016 by Brocade Communications Systems, Inc.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+
+use lib "/opt/vyatta/share/perl5/";
+use strict;
+use warnings;
+use Carp;
+use File::Slurp;
+use Getopt::Long;
+use JSON;
+use Readonly;
+use Vyatta::Configd;
+
+Readonly my $CHCFGFILE => '/run/call-home.cfg';
+
+my ( $status, $config, $cleanup );
+
+sub usage {
+    print <<'EOF';
+usage: call-home [--status|--config|--cleanup]
+EOF
+    exit 1;
+}
+
+GetOptions(
+    "status"  => \$status,
+    "config"  => \$config,
+    "cleanup" => \$cleanup
+) or usage();
+
+sub get_cfg_tree {
+    my ( $path, $fn ) = @_;
+    my $client = Vyatta::Configd::Client->new();
+    my $cfg = eval { $client->$fn($path); };
+    return unless defined $cfg;
+    return $cfg;
+}
+
+sub get_netconf_config {
+    return get_cfg_tree( "service netconf", "tree_get_hash" );
+}
+
+sub get_callhome_status {
+    return get_cfg_tree( "service netconf call-home-status",
+        "tree_get_full_hash" );
+}
+
+# The status option is intended to be run in op-mode
+if ( defined $status ) {
+    my $ch = get_callhome_status();
+    print $ch->{'call-home-status'}, "\n"
+      if $ch->{'call-home-status'};
+    exit 0;
+}
+
+# The cleanup option is intended to be run from a config session
+if ( defined $cleanup ) {
+    exec("/usr/sbin/chclient -c")
+      or croak "error: $!";
+}
+
+# The config option is intended to be run from a config session
+if ( defined $config ) {
+    unlink $CHCFGFILE;
+    my $cfg = get_netconf_config();
+    exit 1
+      unless defined $cfg;
+    exit 0
+      if !defined $cfg->{'netconf'} || exists $cfg->{'netconf'}->{'disable'};
+
+    my @chservers  = ();
+    my $clientlist = $cfg->{'netconf'}->{'call-home'}->{'netconf-client'};
+    foreach my $client (@$clientlist) {
+        next if exists $client->{'disable'};
+        push @chservers, "--server";
+        my $host;
+        if ( index( $client->{'host'}, ":" ) != -1 ) {
+            $host = "[$client->{'host'}]";
+        }
+        else {
+            $host = $client->{'host'};
+        }
+        $host .= ":$client->{'port'}";
+        push @chservers, $host;
+    }
+    open my $file, ">", $CHCFGFILE or die $!;
+    print $file join( ' ', @chservers );
+    close $file;
+    exit 0;
+}
+
+# Launching the call-home client is intended to be performed as a
+# service
+my $opts = read_file($CHCFGFILE);
+exit 0
+  if !defined $opts || length $opts == 0;
+exec("/usr/sbin/chclient $opts")
+  or croak "error: $!";

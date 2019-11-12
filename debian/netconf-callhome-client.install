@@ -1,0 +1,2 @@
+chclient usr/sbin
+scripts/call-home opt/vyatta/sbin
