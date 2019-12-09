@@ -55,7 +55,7 @@ static int multiple_elements_exist(xmlNode *node)
  *
  * Returns first node of type XML_ELEMENT_NODE from <node> and siblings.
 */
-static xmlNode *get_first_element(xmlNode *node)
+xmlNode *get_first_element(xmlNode *node)
 {
 	while (node != NULL) {
 		if (node->type == XML_ELEMENT_NODE) {
@@ -71,7 +71,7 @@ static xmlNode *get_first_element(xmlNode *node)
  * use strdup() as CppUTest can't track that.  Instead, write our own version
  * that uses (tracked) malloc.
  */
-static char *configd_strdup(char *src)
+char *configd_strdup(char *src)
 {
 	int len = strlen(src);
 	char *ret_str = malloc(len + 1);

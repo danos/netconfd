@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, AT&T Intellectual Property.
+ * Copyright (c) 2018-2020, AT&T Intellectual Property.
  * All rights reserved.
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -30,6 +30,27 @@ void configd_close_connection(struct configd_conn *conn)
 char *configd_commit(
 	struct configd_conn *conn,
 	const char * param,
+	struct configd_error *error)
+{
+	CPPUTEST_STUB_RET_VAL(NULL);
+}
+
+char *configd_cancel_commit(
+	struct configd_conn *conn,
+	const char * param,
+	const char * body,
+	struct configd_error *error)
+{
+	CPPUTEST_STUB_RET_VAL(NULL);
+}
+
+char *configd_confirmed_commit(
+	struct configd_conn *conn,
+	const char * param,
+	int confirmed,
+	const char *timeout,
+	const char *persist,
+	const char *persistid,
 	struct configd_error *error)
 {
 	CPPUTEST_STUB_RET_VAL(NULL);

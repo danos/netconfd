@@ -11,7 +11,7 @@ LDFLAGS += -lnetconf
 CFLAGS += $(INCDIR) -DDISABLE_NOTIFICATIONS -D_GNU_SOURCE --std=c99 -ggdb -Wall -Wextra -Werror
 TEST_CFLAGS += $(INCDIR) -Wall -Wextra -Werror
 
-SRCS := configd/configd_datastore.c configd/configd_path.c main.c
+SRCS := configd/configd_datastore.c configd/configd_path.c configd/configd_xml_utils.c main.c
 
 OBJS := $(SRCS:%.c=$(OBJDIR)/%.o) $(CHSRV).o
 

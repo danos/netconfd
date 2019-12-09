@@ -10,6 +10,7 @@ filter_test_SRCS := \
 	src/mocks/vyatta_cfg_mocks.c \
 	../configd/configd_datastore.c \
 	../configd/configd_path.c \
+	../configd/configd_xml_utils.c \
 
 filter_test_CFLAGS += -I/usr/include/libxml2 -I../configd
 filter_test_CFLAGS += -include /usr/include/CppUTest/MemoryLeakDetectorMallocMacros.h

@@ -11,6 +11,7 @@ filter_no_memcheck_test_SRCS := \
 	src/mocks/vyatta_cfg_mocks.c \
 	../configd/configd_datastore.c \
 	../configd/configd_path.c \
+	../configd/configd_xml_utils.c \
 
 filter_no_memcheck_test_CFLAGS += -I/usr/include/libxml2 -I../configd
 filter_no_memcheck_test_CFLAGS += -Wall -Wextra -Wno-unused-parameter

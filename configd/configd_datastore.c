@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+ * Copyright (c) 2019-2020, AT&T Intellectual Property. All rights reserved.
  *
  * Copyright (c) 2014-2017 by Brocade Communications Systems, Inc.
  * All rights reserved.
@@ -27,6 +27,7 @@
 
 #include "configd_datastore.h"
 #include "configd_path.h"
+#include "configd_xml_utils.h"
 
 #define LOG(format,args...) syslog(LOG_ERR, format, ##args)
 
@@ -460,7 +461,78 @@ out:
 	return rep;
 }
 
-static int configd_ds_copyconfig(struct configd_ds *configd_ds, NC_DATASTORE target, NC_DATASTORE source, struct nc_err **error)
+static int configd_ds_cancelcommit(struct configd_ds *configd_ds, const nc_rpc *rpc, struct nc_err **error)
+{
+	int retval = EXIT_SUCCESS;
+	char *buf = NULL;
+	struct configd_error err = { .source = NULL, .text = NULL };
+	struct configd_conn *conn = &configd_ds->conn;
+	char *persistid = NULL;
+
+	persistid = configd_get_rpc_value("cancel-commit", "persist-id", rpc);
+	buf = configd_cancel_commit(conn, "via netconf", persistid, &err);
+	if (buf == NULL) {
+		*error = nc_err_new (NC_ERR_OP_FAILED);
+		if (err.text != NULL) {
+			nc_err_set(*error, NC_ERR_PARAM_MSG, err.text);
+		} else {
+			nc_err_set(*error, NC_ERR_PARAM_MSG, "Failed to cancel confirmed commit");
+		}
+		retval = EXIT_FAILURE;
+	} else {
+		free(buf);
+	}
+
+	if (persistid != NULL) {
+		free(persistid);
+	}
+
+	return retval;
+}
+
+static int commit_internal(struct configd_conn *conn, const nc_rpc *rpc, struct nc_err **error)
+{
+	int retval = EXIT_SUCCESS;
+	char *buf = NULL;
+	char *persistid = NULL;
+	char *persist = NULL;
+	char *timeout = NULL;
+	int confirmed = 0;
+	struct configd_error err = { .source = NULL, .text = NULL };
+
+	persistid = configd_get_rpc_value("commit", "persist-id", rpc);
+	persist = configd_get_rpc_value("commit", "persist", rpc);
+	timeout = configd_get_rpc_value("commit", "timeout", rpc);
+	confirmed = configd_rpc_value_exists("commit", "confirmed", rpc);
+
+	buf = configd_confirmed_commit(conn, "via netconf",
+			confirmed, timeout, persist, persistid, &err);
+
+	if (buf == NULL) {
+		*error = nc_err_new (NC_ERR_OP_FAILED);
+		if (err.text != NULL) {
+			nc_err_set(*error, NC_ERR_PARAM_MSG, err.text);
+		} else {
+			nc_err_set(*error, NC_ERR_PARAM_MSG, "Failed to commit candidate configuration");
+		}
+		retval = EXIT_FAILURE;
+	} else {
+		free(buf);
+	}
+	if (timeout != NULL) {
+		free(timeout);
+	}
+	if (persistid != NULL) {
+		free(persistid);
+	}
+	if (persist != NULL) {
+		free(persist);
+	}
+
+	return retval;
+}
+
+static int configd_ds_copyconfig(struct configd_ds *configd_ds, NC_DATASTORE target, NC_DATASTORE source, const nc_rpc *rpc, struct nc_err **error)
 {
 	int retval = EXIT_SUCCESS;
 	char *buf = NULL;
@@ -574,18 +646,7 @@ static int configd_ds_copyconfig(struct configd_ds *configd_ds, NC_DATASTORE tar
 			break;
 		case NC_DATASTORE_CANDIDATE:
 			/* commit */
-			buf = configd_commit(conn, "via netconf", &err);
-			if (buf == NULL) {
-				*error = nc_err_new (NC_ERR_OP_FAILED);
-				if (err.text != NULL) {
-					nc_err_set(*error, NC_ERR_PARAM_MSG, err.text);
-				} else {
-					nc_err_set(*error, NC_ERR_PARAM_MSG, "Failed to commit candidate configuration");
-				}
-				retval = EXIT_FAILURE;
-			} else {
-				free(buf);
-			}
+			retval = commit_internal(conn, rpc,  error);
 			break;
 		default:
 			LOG("%s: invalid target.", __func__);
@@ -608,6 +669,7 @@ static int configd_ds_copyconfig(struct configd_ds *configd_ds, NC_DATASTORE tar
 
 	return retval;
 }
+
 
 static int configd_ds_deleteconfig(struct configd_ds *configd_ds, NC_DATASTORE target, struct nc_err **error)
 {
@@ -983,16 +1045,19 @@ nc_reply* configd_ds_apply_rpc(struct configd_ds *ds, const nc_rpc* rpc)
 			nc_err_set(e, NC_ERR_PARAM_INFO_BADELEM, "target");
 			break;
 		}
-		ret = configd_ds_copyconfig(ds, target, source, &e);
+		ret = configd_ds_copyconfig(ds, target, source, NULL, &e);
 		break;
 	case NC_OP_DELETECONFIG:
 		ret = configd_ds_deleteconfig(ds, nc_rpc_get_target(rpc), &e);
 		break;
 	case NC_OP_COMMIT:
-		ret = configd_ds_copyconfig (ds, NC_DATASTORE_RUNNING, NC_DATASTORE_CANDIDATE, &e);
+		ret = configd_ds_copyconfig (ds, NC_DATASTORE_RUNNING, NC_DATASTORE_CANDIDATE, rpc, &e);
+		break;
+	case NC_OP_CANCELCOMMIT:
+		ret = configd_ds_cancelcommit (ds, rpc, &e);
 		break;
 	case NC_OP_DISCARDCHANGES:
-		ret = configd_ds_copyconfig(ds, NC_DATASTORE_CANDIDATE, NC_DATASTORE_RUNNING, &e);
+		ret = configd_ds_copyconfig(ds, NC_DATASTORE_CANDIDATE, NC_DATASTORE_RUNNING, NULL, &e);
 		break;
 	case NC_OP_GETSCHEMA:
 		rep = configd_ds_getschema(ds, rpc);

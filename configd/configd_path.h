@@ -22,6 +22,10 @@ struct configd_ds {
 	int lockid;
 };
 
+extern xmlNode *get_first_element(xmlNode *node);
+
+extern char *configd_strdup(char *src);
+
 extern char *configd_convert_filter_to_config_path(
 	const nc_rpc *rpc, struct configd_ds *ds);
 

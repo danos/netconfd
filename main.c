@@ -1,5 +1,8 @@
 /*
  * netconfd
+ * Copyright (c) 2020, AT&T Intellectual Property.
+ * All rights reserved.
+ *
  * Copyright (c) 2014-2015 by Brocade Communications Systems, Inc.
  * All rights reserved.
  *
@@ -173,6 +176,7 @@ void process_rpc(evutil_socket_t UNUSED(in), short UNUSED(events), void *arg)
 		case NC_OP_EDITCONFIG:
 		case NC_OP_COMMIT:
 		case NC_OP_DISCARDCHANGES:
+		case NC_OP_CANCELCOMMIT:
 			reply = configd_ds_apply_rpc(configd_ds, rpc);
 			break;
 		default:
@@ -254,7 +258,7 @@ int main(int UNUSED(argc), char** UNUSED(argv))
 	ncdflt_set_supported(NCWD_MODE_ALL);
 	struct nc_cpblts* cap = nc_session_get_cpblts_default();
 	nc_cpblts_remove(cap, NC_CAP_WRUNNING_ID);
-	nc_cpblts_remove(cap, NC_CAP_CONFIRMED_COMMIT_ID);
+	nc_cpblts_add(cap, NC_CAP_CONFIRMED_COMMIT_ID);
 	nc_cpblts_add(cap, NC_CAP_VALIDATE11_ID);
 	nc_cpblts_add(cap, NC_CAP_VALIDATE10_ID);
 	setup_configd_caps(cap);
