@@ -502,7 +502,7 @@ static int commit_internal(struct configd_conn *conn, const nc_rpc *rpc, struct 
 
 	persistid = configd_get_rpc_value("commit", "persist-id", rpc);
 	persist = configd_get_rpc_value("commit", "persist", rpc);
-	timeout = configd_get_rpc_value("commit", "timeout", rpc);
+	timeout = configd_get_rpc_value("commit", "confirm-timeout", rpc);
 	confirmed = configd_rpc_value_exists("commit", "confirmed", rpc);
 
 	buf = configd_confirmed_commit(conn, "via netconf",
