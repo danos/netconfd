@@ -1,3 +1,14 @@
+netconfd (0.24) unstable; urgency=medium
+
+  [ Daniel Gollub ]
+  * doc: remove historic documentation
+
+  [ Paul Carson ]
+  * Support Netconf confirmed commit (Closes: VRVDR-32867)
+  * Fix the <commit> parameter <confirm-timeout> (Fixes: VRVDR-49982)
+
+ -- William Ivory <william.ivory@intl.att.com>  Fri, 03 Apr 2020 11:42:27 +0100
+
 netconfd (0.23) unstable; urgency=medium
 
   * DANOS Import Master
