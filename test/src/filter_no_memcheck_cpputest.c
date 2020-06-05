@@ -13,18 +13,9 @@
 #include "CppUTest/TestHarness_c.h"
 #include "CppUTestExt/MockSupport_c.h"
 
-#include "filter_no_memcheck_cpputest.h"
+#include "netconf_test.h"
 
-#define XML_RPC_GET_SUBTREE_START_TAG \
-	"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" \
-	"<nc:rpc xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\" " \
-	"    message-id=\"urn:uuid:f5a7861b-43ed-47f5-93dc-fbc30e1c4720\">" \
-	"  <nc:get>" \
-	"    <nc:filter type=\"subtree\">"
-#define XML_RPC_GET_SUBTREE_END_TAG \
-	"    </nc:filter>" \
-	"  </nc:get>" \
-	"</nc:rpc>"
+#include "filter_no_memcheck_cpputest.h"
 
 // Finally, check the output from our filter evaluation is passed on to
 // the configd API correctly.
@@ -35,7 +26,7 @@ char *test_rpc_selection_single_tag = ""
        "        </nc:qos>"
        "      </nc:policy>";
 
-static const char *MAP_NOT_TAG = NULL;
+//static const char *MAP_NOT_TAG = NULL;
 
 void test_check_configd_gets_correct_filter(void)
 {

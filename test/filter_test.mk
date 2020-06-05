@@ -7,6 +7,7 @@
 filter_test_SRCS := \
 	src/filter_cpputest.c \
 	src/filter_cpputest_wrapper.cpp \
+	src/netconf_test.c \
 	src/mocks/vyatta_cfg_mocks.c \
 	../configd/configd_datastore.c \
 	../configd/configd_path.c \

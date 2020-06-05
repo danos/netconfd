@@ -25,7 +25,7 @@ Description: Netconf daemon
 
 Package: vyatta-service-netconf-v1-yang
 Architecture: all
-Depends: ${misc:Depends}, ${yang:Dpends},
+Depends: ${misc:Depends}, ${yang:Depends},
  vyatta-netconf-agent (>= ${source:Version}),
  vyatta-cfg
 Description: vyatta-service-netconf module
@@ -33,7 +33,7 @@ Description: vyatta-service-netconf module
 
 Package: vyatta-service-netconf-routing-instance-v1-yang
 Architecture: all
-Depends: ${misc:Depends}, ${yang:Dpends},
+Depends: ${misc:Depends}, ${yang:Depends},
  vyatta-service-netconf-v1-yang (>= ${source:Version}),
  vyatta-cfg
 Description: vyatta-service-netconf-routing-instance module

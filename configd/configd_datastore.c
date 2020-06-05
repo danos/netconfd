@@ -24,6 +24,7 @@
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
 #include <vyatta-cfg/client/mgmt.h>
+#include <vyatta-util/map.h>
 
 #include "configd_datastore.h"
 #include "configd_path.h"
@@ -46,6 +47,133 @@ enum {
 	GET_FULL
 };
 
+static void set_nc_err_field_from_mgmt_err(
+	struct nc_err *err,
+	NC_ERR_PARAM param,
+	const char *value)
+{
+	if (value != NULL) {
+		nc_err_set(err, param, value);
+	}
+}
+
+// map_next returns a string of the form 'key=value'.  This function returns
+// !0 if the key part of key_eq_value_str matches the key_name, otherwise 0.
+static int key_equals(const char *key_name, const char *key_eq_value_str)
+{
+	return (!strncmp(key_name, key_eq_value_str, strlen(key_name)));
+}
+
+static void set_nc_err_info_fields_from_mgmt_error(
+	struct nc_err *err,
+	struct map *mgmt_info)
+{
+	const char *key_eq_value_str = NULL;
+
+	if (mgmt_info == NULL) {
+		return;
+	}
+
+	while ((key_eq_value_str = map_next(mgmt_info, key_eq_value_str))) {
+		if (key_equals("bad-element", key_eq_value_str)) {
+			nc_err_set(err, NC_ERR_PARAM_INFO_BADELEM,
+				map_get(mgmt_info, "bad-element"));
+		} else if (key_equals("bad-attribute", key_eq_value_str)) {
+			nc_err_set(err, NC_ERR_PARAM_INFO_BADATTR,
+				map_get(mgmt_info, "bad-attribute"));
+		} else if (key_equals("bad-namespace", key_eq_value_str)) {
+			nc_err_set(err, NC_ERR_PARAM_INFO_BADNS,
+				map_get(mgmt_info, "bad-namespace"));
+		} else if (key_equals("session-id", key_eq_value_str)) {
+			nc_err_set(err, NC_ERR_PARAM_INFO_SID,
+				map_get(mgmt_info, "session-id"));
+		} else {
+			LOG("E| %s unrecognised info: %s (%s:%d)",
+				__func__, key_eq_value_str, __FILE__, __LINE__);
+		}
+	}
+}
+
+struct nc_err *nc_err_from_cfg_mgmt_err(struct configd_mgmt_error *me)
+{
+	struct nc_err *err;
+
+	// By using NC_ERR_EMPTY, *no* fields are prepopulated.
+	err = nc_err_new(NC_ERR_EMPTY);
+	if (err == NULL) {
+		return NULL;
+	}
+
+	set_nc_err_field_from_mgmt_err(err,
+		NC_ERR_PARAM_TYPE, configd_mgmt_error_type(me));
+	set_nc_err_field_from_mgmt_err(err,
+		NC_ERR_PARAM_SEVERITY, configd_mgmt_error_severity(me));
+	set_nc_err_field_from_mgmt_err(err,
+		NC_ERR_PARAM_TAG, configd_mgmt_error_tag(me));
+	set_nc_err_field_from_mgmt_err(err,
+		NC_ERR_PARAM_MSG, configd_mgmt_error_message(me));
+	set_nc_err_field_from_mgmt_err(err,
+		NC_ERR_PARAM_PATH, configd_mgmt_error_path(me));
+	set_nc_err_field_from_mgmt_err(err,
+		NC_ERR_PARAM_APPTAG, configd_mgmt_error_app_tag(me));
+
+	set_nc_err_info_fields_from_mgmt_error(
+		err, (struct map *)configd_mgmt_error_info(me));
+
+	return err;
+
+}
+
+nc_reply *configd_ds_basic_nc_error(
+	NC_ERR err_type,
+	const char* err_text,
+	const char *fallback_text)
+{
+	struct nc_err *ne;
+
+	ne = nc_err_new(err_type);
+	if (err_text != NULL) {
+		nc_err_set(ne, NC_ERR_PARAM_MSG, err_text);
+	} else if (fallback_text != NULL) {
+		nc_err_set(ne, NC_ERR_PARAM_MSG, fallback_text);
+	} else {
+		nc_err_set(ne, NC_ERR_PARAM_MSG, "Unspecified config system error");
+	}
+
+	return nc_reply_error(ne);
+}
+
+nc_reply *configd_ds_build_reply_error(
+	struct configd_error *ce,
+	NC_ERR err_type,
+	const char *fallback_text)
+{
+	int num_errors = configd_error_num_mgmt_errors(ce);
+	nc_reply *rep = NULL;
+	struct nc_err *ne;
+	int i = 0;
+
+	if ((num_errors == 0) || !configd_error_is_mgmt_error(ce)) {
+		return configd_ds_basic_nc_error(
+			err_type, ce->text, fallback_text);
+	}
+
+	struct configd_mgmt_error **mgmt_err_list =
+		configd_error_mgmt_error_list(ce);
+	if ((mgmt_err_list == NULL) || (mgmt_err_list[0] == NULL)) {
+		return configd_ds_basic_nc_error(err_type, ce->text, fallback_text);
+	}
+
+	ne = nc_err_from_cfg_mgmt_err(mgmt_err_list[0]);
+	rep = nc_reply_error(ne);
+
+	for (i = 1; i < num_errors; i++) {
+		nc_reply_error_add(
+			rep, nc_err_from_cfg_mgmt_err(mgmt_err_list[i]));
+	}
+
+	return rep;
+}
 struct configd_ds *new_configd_ds() {
 	return calloc(1, sizeof(struct configd_ds));
 }
@@ -194,7 +322,12 @@ static char* configd_get_rpc_config(const nc_rpc* rpc, struct nc_err **error)
 	return data;
 }
 
-static nc_reply * configd_ds_get_internal(struct configd_ds *configd_ds, const nc_rpc *rpc, NC_DATASTORE source, int get_op, struct nc_err** error)
+static nc_reply * configd_ds_get_internal(
+	struct configd_ds *configd_ds,
+	const nc_rpc *rpc,
+	NC_DATASTORE source,
+	int get_op,
+	struct nc_err** error)
 {
 	Db target_ds;
 	char *tree = NULL;
@@ -278,8 +411,9 @@ static nc_reply * configd_ds_get_internal(struct configd_ds *configd_ds, const n
 
 	if (tree == NULL || err.text != NULL) {
 		LOG("E| %s accessing ds failed: %s (%s:%d)", __func__, err.text,  __FILE__, __LINE__);
-		*error = nc_err_new(NC_ERR_OP_FAILED);
-		reply = NULL;
+		reply = configd_ds_build_reply_error(
+			&err, NC_ERR_OP_FAILED,
+			"GET / GET-CONFIG operation failed.");
 		goto done;
 	}
 
@@ -445,10 +579,10 @@ static nc_reply *configd_ds_editconfig(struct configd_ds *configd_ds, const nc_r
 	struct configd_error err = { .source = NULL, .text = NULL };
 	char *result = configd_edit_config_xml(&configd_ds->conn, "candidate", defaultop, testopt, erropt, (const char *)edit_config, &err);
 	if (!result) {
-		*error = nc_err_new(NC_ERR_OP_FAILED);
-		if (err.text) {
-			nc_err_set(*error, NC_ERR_PARAM_MSG, err.text);
-		}
+		rep = configd_ds_build_reply_error(
+			&err, NC_ERR_OP_FAILED,
+			"edit-config operation failed");
+
 	} else {
 		 rep = nc_reply_ok();
 	}
@@ -490,14 +624,14 @@ static int configd_ds_cancelcommit(struct configd_ds *configd_ds, const nc_rpc *
 	return retval;
 }
 
-static int commit_internal(struct configd_conn *conn, const nc_rpc *rpc, struct nc_err **error)
+static nc_reply *commit_internal(struct configd_conn *conn, const nc_rpc *rpc)
 {
-	int retval = EXIT_SUCCESS;
 	char *buf = NULL;
 	char *persistid = NULL;
 	char *persist = NULL;
 	char *timeout = NULL;
 	int confirmed = 0;
+	nc_reply *rep = NULL;
 	struct configd_error err = { .source = NULL, .text = NULL };
 
 	persistid = configd_get_rpc_value("commit", "persist-id", rpc);
@@ -509,13 +643,10 @@ static int commit_internal(struct configd_conn *conn, const nc_rpc *rpc, struct 
 			confirmed, timeout, persist, persistid, &err);
 
 	if (buf == NULL) {
-		*error = nc_err_new (NC_ERR_OP_FAILED);
-		if (err.text != NULL) {
-			nc_err_set(*error, NC_ERR_PARAM_MSG, err.text);
-		} else {
-			nc_err_set(*error, NC_ERR_PARAM_MSG, "Failed to commit candidate configuration");
-		}
-		retval = EXIT_FAILURE;
+		rep = configd_ds_build_reply_error(
+			&err, NC_ERR_OP_FAILED,
+			"Failed to commit candidate configuration.");
+		configd_error_free(&err);
 	} else {
 		free(buf);
 	}
@@ -529,12 +660,22 @@ static int commit_internal(struct configd_conn *conn, const nc_rpc *rpc, struct 
 		free(persist);
 	}
 
-	return retval;
+	if (rep != NULL) {
+		return rep;
+	}
+
+	return nc_reply_ok();
 }
 
-static int configd_ds_copyconfig(struct configd_ds *configd_ds, NC_DATASTORE target, NC_DATASTORE source, const nc_rpc *rpc, struct nc_err **error)
+static nc_reply *configd_ds_copyconfig(
+	struct configd_ds *configd_ds,
+	NC_DATASTORE target,
+	NC_DATASTORE source,
+	const nc_rpc *rpc)
 {
+	struct nc_err *nce = NULL;
 	int retval = EXIT_SUCCESS;
+	nc_reply *rep = NULL;
 	char *buf = NULL;
 	struct configd_error err = { .source = NULL, .text = NULL };
 	struct configd_conn *conn = &configd_ds->conn;
@@ -542,17 +683,17 @@ static int configd_ds_copyconfig(struct configd_ds *configd_ds, NC_DATASTORE tar
 	/*Validate source and target*/
 	switch(target) {
 	case NC_DATASTORE_CANDIDATE:
-		if (is_sess_locked(configd_ds, error))
-			return EXIT_FAILURE;
+		if (is_sess_locked(configd_ds, &nce))
+			return nc_reply_error(nce);
 	case NC_DATASTORE_STARTUP:
 	case NC_DATASTORE_RUNNING:
 	case NC_DATASTORE_CONFIG:
 		break;
 	default:
 		LOG("%s: invalid target.", __func__);
-		*error = nc_err_new(NC_ERR_BAD_ELEM);
-		nc_err_set(*error, NC_ERR_PARAM_INFO_BADELEM, "target");
-		return EXIT_FAILURE;
+		nce = nc_err_new(NC_ERR_BAD_ELEM);
+		nc_err_set(nce, NC_ERR_PARAM_INFO_BADELEM, "target");
+		return nc_reply_error(nce);
 	}
 
 	switch(source) {
@@ -564,9 +705,9 @@ static int configd_ds_copyconfig(struct configd_ds *configd_ds, NC_DATASTORE tar
 		break;
 	default:
 		LOG("%s: invalid source.", __func__);
-		*error = nc_err_new(NC_ERR_BAD_ELEM);
-		nc_err_set(*error, NC_ERR_PARAM_INFO_BADELEM, "source");
-		return EXIT_FAILURE;
+		nce = nc_err_new(NC_ERR_BAD_ELEM);
+		nc_err_set(nce, NC_ERR_PARAM_INFO_BADELEM, "source");
+		return nc_reply_error(nce);
 	}
 
 	// tree_get will handle NACM for read operations.
@@ -579,17 +720,15 @@ static int configd_ds_copyconfig(struct configd_ds *configd_ds, NC_DATASTORE tar
 			/* save() */
 			buf = configd_save(conn, "", &err);
 			if (buf == NULL) {
-				*error = nc_err_new (NC_ERR_OP_FAILED);
-				if (err.text != NULL) {
-					nc_err_set(*error, NC_ERR_PARAM_MSG, err.text);
-				} else {
-					nc_err_set(*error, NC_ERR_PARAM_MSG, "Failed to save running to startup.");
-				}
-				retval = EXIT_FAILURE;
+				rep = configd_ds_build_reply_error(
+					&err, NC_ERR_OP_FAILED,
+					"Failed to save running to startup.");
+			} else {
+				rep = nc_reply_ok();
 			}
 			configd_error_free(&err);
 			free(buf);
-			break;
+			return rep;
 		case NC_DATASTORE_STARTUP:
 			/* nop */
 			break;
@@ -599,10 +738,9 @@ static int configd_ds_copyconfig(struct configd_ds *configd_ds, NC_DATASTORE tar
 			/* not allowed by our system */
 		default:
 			LOG("%s: invalid target.", __func__);
-			*error = nc_err_new(NC_ERR_BAD_ELEM);
-			nc_err_set(*error, NC_ERR_PARAM_INFO_BADELEM, "source");
-			retval = EXIT_FAILURE;
-			break;
+			nce = nc_err_new(NC_ERR_BAD_ELEM);
+			nc_err_set(nce, NC_ERR_PARAM_INFO_BADELEM, "source");
+			return nc_reply_error(nce);
 		}
 		break;
 	case NC_DATASTORE_CANDIDATE:
@@ -618,23 +756,20 @@ static int configd_ds_copyconfig(struct configd_ds *configd_ds, NC_DATASTORE tar
 				break;
 			}
 			if (configd_load(conn, "/config/config.boot", &err) != 1) {
-				*error = nc_err_new (NC_ERR_OP_FAILED);
-				if (err.text != NULL) {
-					nc_err_set(*error, NC_ERR_PARAM_MSG, err.text);
-				} else {
-					nc_err_set(*error, NC_ERR_PARAM_MSG, "Failed to copy startup to candidate.");
-				}
-				retval = EXIT_FAILURE;
+				rep = configd_ds_build_reply_error(
+					&err, NC_ERR_OP_FAILED,
+					"Failed to copy startup to candidate.");
+			} else {
+				rep = nc_reply_ok();
 			}
-			break;
+			configd_error_free(&err);
+			return rep;
 		case NC_DATASTORE_CANDIDATE:
 			/* nop */
 			break;
 		case NC_DATASTORE_CONFIG:
 			/* editconfig DEFOP = REPLACE */
-			*error = nc_err_new(NC_ERR_OP_NOT_SUPPORTED);
-			return EXIT_FAILURE;
-			break;
+			return nc_reply_error(nc_err_new(NC_ERR_OP_NOT_SUPPORTED));
 		default:
 			break;
 		}
@@ -646,28 +781,28 @@ static int configd_ds_copyconfig(struct configd_ds *configd_ds, NC_DATASTORE tar
 			break;
 		case NC_DATASTORE_CANDIDATE:
 			/* commit */
-			retval = commit_internal(conn, rpc,  error);
-			break;
+			return commit_internal(conn, rpc);
 		default:
 			LOG("%s: invalid target.", __func__);
-			*error = nc_err_new(NC_ERR_BAD_ELEM);
-			nc_err_set(*error, NC_ERR_PARAM_INFO_BADELEM, "target");
-			retval = EXIT_FAILURE;
-			break;
+			nce = nc_err_new(NC_ERR_BAD_ELEM);
+			nc_err_set(nce, NC_ERR_PARAM_INFO_BADELEM, "target");
+			return nc_reply_error(nce);
 		}
 		break;
 	case NC_DATASTORE_CONFIG:
 		LOG("%s: invalid target.", __func__);
-		*error = nc_err_new(NC_ERR_BAD_ELEM);
-		nc_err_set(*error, NC_ERR_PARAM_INFO_BADELEM, "target");
-		retval = EXIT_FAILURE;
-		break;
+		nce = nc_err_new(NC_ERR_BAD_ELEM);
+		nc_err_set(nce, NC_ERR_PARAM_INFO_BADELEM, "target");
+		return nc_reply_error(nce);
 
 	default:
 		break;
 	}
 
-	return retval;
+	if (retval == EXIT_SUCCESS) {
+		return nc_reply_ok();
+	}
+	return nc_reply_error(nc_err_new(NC_ERR_OP_FAILED));
 }
 
 
@@ -718,13 +853,9 @@ static nc_reply* configd_ds_validate(struct configd_ds *ds, const nc_rpc * rpc)
 	case NC_DATASTORE_CANDIDATE:
 		buf = configd_validate(&configd_ds->conn, &err);
 		if (buf == NULL) {
-			e = nc_err_new (NC_ERR_OP_FAILED);
-			if (err.text != NULL) {
-				nc_err_set(e, NC_ERR_PARAM_MSG, err.text);
-			} else {
-				nc_err_set(e, NC_ERR_PARAM_MSG, "Validation failed for candidate configuration");
-			}
-			rep = nc_reply_error(e);
+			rep = configd_ds_build_reply_error(
+				&err, NC_ERR_OP_FAILED,
+				"Validation failed for candidate configuration.");
 		} else {
 			rep = nc_reply_ok();
 		}
@@ -955,8 +1086,10 @@ nc_reply* configd_ds_get(struct configd_ds *ds, const nc_rpc* rpc)
 	switch (nc_reply_get_type(reply)) {
 	case NC_REPLY_DATA:
 		break;
-	default:
+	case NC_REPLY_ERROR:
 		return reply;
+	default:
+		return nc_reply_error(error);
 	}
 
 	config = nc_reply_get_data(reply);
@@ -1045,19 +1178,19 @@ nc_reply* configd_ds_apply_rpc(struct configd_ds *ds, const nc_rpc* rpc)
 			nc_err_set(e, NC_ERR_PARAM_INFO_BADELEM, "target");
 			break;
 		}
-		ret = configd_ds_copyconfig(ds, target, source, NULL, &e);
+		rep = configd_ds_copyconfig(ds, target, source, NULL);
 		break;
 	case NC_OP_DELETECONFIG:
 		ret = configd_ds_deleteconfig(ds, nc_rpc_get_target(rpc), &e);
 		break;
 	case NC_OP_COMMIT:
-		ret = configd_ds_copyconfig (ds, NC_DATASTORE_RUNNING, NC_DATASTORE_CANDIDATE, rpc, &e);
+		rep = configd_ds_copyconfig (ds, NC_DATASTORE_RUNNING, NC_DATASTORE_CANDIDATE, rpc);
 		break;
 	case NC_OP_CANCELCOMMIT:
 		ret = configd_ds_cancelcommit (ds, rpc, &e);
 		break;
 	case NC_OP_DISCARDCHANGES:
-		ret = configd_ds_copyconfig(ds, NC_DATASTORE_CANDIDATE, NC_DATASTORE_RUNNING, NULL, &e);
+		rep = configd_ds_copyconfig(ds, NC_DATASTORE_CANDIDATE, NC_DATASTORE_RUNNING, NULL);
 		break;
 	case NC_OP_GETSCHEMA:
 		rep = configd_ds_getschema(ds, rpc);
