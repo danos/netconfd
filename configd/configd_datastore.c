@@ -844,7 +844,7 @@ static nc_reply *configd_ds_getschema(struct configd_ds *ds, const nc_rpc* rpc)
         xmlXPathRegisterNs(ctx, BAD_CAST NC_NS_BASE10_ID, BAD_CAST NC_NS_BASE10);
         xmlXPathRegisterNs(ctx, BAD_CAST NC_NS_MONITORING_ID, BAD_CAST NC_NS_MONITORING);
 
-	if ((query_result = xmlXPathEvalExpression(BAD_CAST 
+	if ((query_result = xmlXPathEvalExpression(BAD_CAST
 	     "/"NC_NS_BASE10_ID":rpc/"NC_NS_MONITORING_ID":get-schema/"NC_NS_MONITORING_ID":identifier",
 	     ctx)) != NULL && !xmlXPathNodeSetIsEmpty(query_result->nodesetval)) {
 		if (query_result->nodesetval->nodeNr > 1) {
@@ -917,8 +917,8 @@ static nc_reply *configd_ds_getschema(struct configd_ds *ds, const nc_rpc* rpc)
 		xmlBufferFree(resultbuffer);
 		xmlFreeDoc(doc);
 	}
-	
-	reply = nc_reply_data_ns(data, "urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring"); 
+
+	reply = nc_reply_data_ns(data, "urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring");
 	free(data);
 	return reply;
 }
@@ -950,7 +950,7 @@ nc_reply* configd_ds_get(struct configd_ds *ds, const nc_rpc* rpc)
 	}
 	free(data);
 	free(netconf_state);
-	
+
 	reply = configd_ds_get_all(ds, rpc, NC_DATASTORE_RUNNING, &error);
 	switch (nc_reply_get_type(reply)) {
 	case NC_REPLY_DATA:
@@ -993,7 +993,7 @@ nc_reply* configd_ds_get(struct configd_ds *ds, const nc_rpc* rpc)
 			node = NULL;
 		}
 	}
-	
+
 	xmlFreeDoc(doc1);
 	xmlFreeDoc(doc2);
 
