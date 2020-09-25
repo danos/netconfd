@@ -1,3 +1,10 @@
+netconfd (0.25) unstable; urgency=medium
+
+  * Autosave reformatting for configd_datastore.c
+  * Pass errors from configd back to caller
+
+ -- William Ivory <william.ivory@intl.att.com>  Fri, 25 Sep 2020 08:49:34 +0100
+
 netconfd (0.24) unstable; urgency=medium
 
   [ Daniel Gollub ]
