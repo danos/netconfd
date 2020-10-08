@@ -10,7 +10,7 @@ Build-Depends: debhelper (>= 9),
  libnetconf-dev (>= 0.10.0),
  libssh-dev,
  liburiparser-dev,
- libvyatta-cfg-dev (>= 0.122),
+ libvyatta-cfg-dev (>= 1.28),
  libvyatta-util-dev,
  libxml2-dev
 Standards-Version: 3.9.6
