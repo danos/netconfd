@@ -129,7 +129,7 @@ int configd_sess_exists(
 		->returnValue().value.intValue;
 }
 
-int configd_sess_setup(
+int configd_sess_setup_shared(
 	struct configd_conn *conn,
 	struct configd_error *error)
 {

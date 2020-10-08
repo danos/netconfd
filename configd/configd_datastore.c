@@ -195,18 +195,16 @@ int configd_ds_init(void *ds)
 	/* need a unique id for the session id, use an encoding of netconf for now */
 	configd_set_session_id(conn, "NETCONF");
 
-	if (configd_sess_exists(conn, NULL) != 1) {
-		struct configd_error err = { .source = NULL, .text = NULL };
-		rc = configd_sess_setup(conn, &err);
-		if (rc < 0) {
-			if (err.text != NULL) {
-				LOG("E| %s %s", "Failed to setup configd session", err.text);
-			} else {
-				LOG("E| %s", "Failed to setup configd session");
-			}
-			configd_error_free(&err);
-			return EXIT_FAILURE;
+	struct configd_error err = { .source = NULL, .text = NULL };
+	rc = configd_sess_setup_shared(conn, &err);
+	if (rc < 0) {
+		if (err.text != NULL) {
+			LOG("E| %s %s", "Failed to setup configd session", err.text);
+		} else {
+			LOG("E| %s", "Failed to setup configd session");
 		}
+		configd_error_free(&err);
+		return EXIT_FAILURE;
 	}
 
 	return EXIT_SUCCESS;
