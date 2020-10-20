@@ -1,3 +1,10 @@
+netconfd (0.25.1) unstable; urgency=medium
+
+  [ Duncan Eastoe ]
+  * Use configd_sess_setup_shared() to create session
+
+ -- William Ivory <william.ivory@intl.att.com>  Tue, 20 Oct 2020 16:24:19 +0100
+
 netconfd (0.25) unstable; urgency=medium
 
   * Autosave reformatting for configd_datastore.c
