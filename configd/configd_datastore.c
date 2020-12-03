@@ -677,6 +677,8 @@ static nc_reply *configd_ds_copyconfig(
 	char *buf = NULL;
 	struct configd_error err = { .source = NULL, .text = NULL };
 	struct configd_conn *conn = &configd_ds->conn;
+	char *config = NULL;
+	xmlDocPtr config_doc;
 
 	/*Validate source and target*/
 	switch(target) {
@@ -766,8 +768,37 @@ static nc_reply *configd_ds_copyconfig(
 			/* nop */
 			break;
 		case NC_DATASTORE_CONFIG:
-			/* editconfig DEFOP = REPLACE */
-			return nc_reply_error(nc_err_new(NC_ERR_OP_NOT_SUPPORTED));
+			config = configd_get_rpc_config(rpc, &nce);
+			if (config == NULL) {
+				return rep;
+			}
+
+			if ((config_doc = xmlReadMemory(
+				config, strlen(config), NULL, NULL, XMLREAD_OPTIONS)) == NULL) {
+				return rep;
+			}
+			xmlChar *copy_config = NULL;
+			xmlDocDumpMemory(config_doc, &copy_config, NULL);
+
+			char *result = configd_copy_config(
+				&configd_ds->conn,
+				"",
+				(const char *)copy_config,
+				"",
+				"candidate",
+				"",
+				&err);
+			if (!result) {
+				rep = configd_ds_build_reply_error(
+					&err, NC_ERR_OP_FAILED,
+					"copy-config operation failed");
+			} else {
+				rep = nc_reply_ok();
+			}
+			configd_error_free(&err);
+			xmlFree(copy_config);
+			xmlFreeDoc(config_doc);
+			return rep;
 		default:
 			break;
 		}
@@ -1176,7 +1207,7 @@ nc_reply* configd_ds_apply_rpc(struct configd_ds *ds, const nc_rpc* rpc)
 			nc_err_set(e, NC_ERR_PARAM_INFO_BADELEM, "target");
 			break;
 		}
-		rep = configd_ds_copyconfig(ds, target, source, NULL);
+		rep = configd_ds_copyconfig(ds, target, source, rpc);
 		break;
 	case NC_OP_DELETECONFIG:
 		ret = configd_ds_deleteconfig(ds, nc_rpc_get_target(rpc), &e);
