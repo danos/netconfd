@@ -7,3 +7,5 @@
 extern void test_edit_config_fail(void);
 
 extern void test_get_fail_direct(void);
+
+extern void test_copy_config_fail(void);

@@ -500,17 +500,26 @@ TEST_C(error, validate_fail)
 		->andReturnIntValue(1);
 	mock_c()->expectOneCall("configd_sess_changed")
 		->andReturnIntValue(1);
+
+	// Returning NULL from configd_validate indicates failure ...
 	mock_c()->expectOneCall("configd_validate")
 		->andReturnStringValue(NULL);
 
+	// Mock functions called by configd_ds_build_reply_error() so we get one
+	// error back with TEST_MSG as the message content.
 	mock_create_mgmt_error_calls(ONE_ERROR, IS_MGMT_ERROR, errlist);
 	mock_nc_err_from_mgmt_err_call(NO_INFO);
 	mock_c()->expectOneCall("configd_error_free");
 
 	test_rpc = nc_rpc_build(test_xml, NULL);
 
+	// Call from as high up the calling stack as possible to show error makes
+	// it this far.
 	reply = configd_ds_apply_rpc(test_ds, test_rpc);
 
+	// We only get access to type and message with existing libnetconf APIs,
+	// so that's all we can check.  TEST_MSG is set up by the call to
+	// mock_nc_err_from_mgmt_err_call()
 	CHECK_EQUAL_C_INT(NC_REPLY_ERROR, nc_reply_get_type(reply));
 	CHECK_EQUAL_C_STRING(TEST_MSG, nc_reply_get_errormsg(reply));
 

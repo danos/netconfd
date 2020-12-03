@@ -138,3 +138,58 @@ void test_get_fail_direct()
 	free(errlist);
 }
 
+void test_copy_config_fail()
+{
+	nc_rpc *test_rpc = NULL;
+	nc_reply *reply = NULL;
+	struct configd_ds *test_ds = NULL;
+
+	struct configd_mgmt_error **errlist = calloc(
+		1, sizeof(struct configd_mgmt_error *));
+	errlist[0] = calloc(1, sizeof(struct configd_mgmt_error));
+
+	char *test_xml =
+		XML_RPC_START_TAG
+		"  <nc:copy-config>"
+		"    <nc:target>"
+		"      <nc:candidate/>"
+		"    </nc:target>"
+		"    <nc:source>"
+		"      <nc:config>"
+		"        <nc:testleaf>value</nc:testleaf>"
+		"      </nc:config>"
+		"    </nc:source>"
+		"  </nc:copy-config>"
+		XML_RPC_END_TAG;
+
+	mock_c()->expectOneCall("configd_sess_locked")
+		->andReturnIntValue(0);
+
+	// Returning NULL from configd_copy_config indicates failure ...
+	mock_c()->expectOneCall("configd_copy_config")
+		->andReturnStringValue(NULL);
+
+	// Mock functions called by configd_ds_build_reply_error() so we get one
+	// error back with TEST_MSG as the message content.
+	mock_c()->expectOneCall("configd_error_num_mgmt_errors")
+		->andReturnIntValue(1);
+	mock_c()->expectOneCall("configd_error_mgmt_error_list")
+		->andReturnPointerValue(errlist);
+	mock_nc_err_from_mgmt_err_call(NO_INFO);
+	mock_c()->expectOneCall("configd_error_free");
+
+	test_rpc = nc_rpc_build(test_xml, NULL);
+
+	// Call from as high up the calling stack as possible to show error makes
+	// it this far.
+	reply = configd_ds_apply_rpc(test_ds, test_rpc);
+
+	// We only get access to type and message with existing libnetconf APIs,
+	// so that's all we can check.  TEST_MSG is set up by the call to
+	// mock_nc_err_from_mgmt_err_call()
+	CHECK_EQUAL_C_INT(NC_REPLY_ERROR, nc_reply_get_type(reply));
+	CHECK_EQUAL_C_STRING("MESSAGE_VALUE", nc_reply_get_errormsg(reply));
+
+	free(errlist[0]);
+	free(errlist);
+}

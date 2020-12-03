@@ -57,6 +57,19 @@ char *configd_confirmed_commit(
 		->returnValue().value.stringValue;
 }
 
+char *configd_copy_config(
+	struct configd_conn *conn,
+	const char *source_datastore,
+	const char *source_config,
+	const char *source_url,
+	const char *target_datastore,
+	const char *target_url,
+	struct configd_error *error)
+{
+	return mock_c()->actualCall("configd_copy_config")
+		->returnValue().value.pointerValue;
+}
+
 char *configd_discard(
 	struct configd_conn *conn,
 	struct configd_error *error)

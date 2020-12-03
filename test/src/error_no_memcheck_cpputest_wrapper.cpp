@@ -46,3 +46,8 @@ TEST(error_no_memcheck, check_get_direct_fail)
 {
 	test_get_fail_direct();
 }
+
+TEST(error_no_memcheck, check_copy_config_fail)
+{
+	test_copy_config_fail();
+}
