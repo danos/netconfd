@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, AT&T Intellectual Property. All rights reserved.
+ * Copyright (c) 2019-2021, AT&T Intellectual Property. All rights reserved.
  *
  * Copyright (c) 2014-2017 by Brocade Communications Systems, Inc.
  * All rights reserved.
@@ -730,8 +730,8 @@ static nc_reply *configd_ds_copyconfig(
 			free(buf);
 			return rep;
 		case NC_DATASTORE_STARTUP:
-			/* nop */
-			break;
+			nce = nc_err_new(NC_ERR_INVALID_VALUE);
+			return nc_reply_error(nce);
 		case NC_DATASTORE_CONFIG:
 			/* not allowed by our system */
 		case NC_DATASTORE_CANDIDATE:
@@ -765,8 +765,8 @@ static nc_reply *configd_ds_copyconfig(
 			configd_error_free(&err);
 			return rep;
 		case NC_DATASTORE_CANDIDATE:
-			/* nop */
-			break;
+			nce = nc_err_new(NC_ERR_INVALID_VALUE);
+			return nc_reply_error(nce);
 		case NC_DATASTORE_CONFIG:
 			config = configd_get_rpc_config(rpc, &nce);
 			if (config == NULL) {
@@ -806,8 +806,8 @@ static nc_reply *configd_ds_copyconfig(
 	case NC_DATASTORE_RUNNING:
 		switch (source) {
 		case NC_DATASTORE_RUNNING:
-			/* nop */
-			break;
+			nce = nc_err_new(NC_ERR_INVALID_VALUE);
+			return nc_reply_error(nce);
 		case NC_DATASTORE_CANDIDATE:
 			/* commit */
 			return commit_internal(conn, rpc);
