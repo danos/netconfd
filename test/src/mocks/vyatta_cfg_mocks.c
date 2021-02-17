@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020, AT&T Intellectual Property.
+ * Copyright (c) 2018-2021, AT&T Intellectual Property.
  * All rights reserved.
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -219,6 +219,16 @@ char *configd_validate(struct configd_conn *conn, struct configd_error *error)
 {
 	return (char *)mock_c()->actualCall("configd_validate")
 		->returnValue().value.stringValue;
+}
+
+char *configd_validate_config(
+	struct configd_conn *conn,
+	const char *encoding,
+	const char *source_config,
+	struct configd_error *error)
+{
+	return mock_c()->actualCall("configd_validate_config")
+		->returnValue().value.pointerValue;
 }
 
 int configd_error_is_mgmt_error(struct configd_error *ce)
