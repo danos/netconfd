@@ -870,17 +870,18 @@ static nc_reply* configd_ds_validate(struct configd_ds *ds, const nc_rpc * rpc)
 	struct nc_err *e = NULL;
 	nc_reply *rep = NULL;
 	char *buf = NULL;
+	char *config = NULL;
+	xmlDocPtr config_doc;
 	struct configd_error err = { .source = NULL, .text = NULL };
 
 	struct configd_ds *configd_ds = (struct configd_ds*)ds;
 
-	if (configd_ds_changed(ds) == EXIT_FAILURE) {
-		rep = nc_reply_ok();
-		return rep;
-	}
-	/*Vyatta can only validate the candidate configuration right now*/
 	switch (source = nc_rpc_get_source(rpc)) {
 	case NC_DATASTORE_CANDIDATE:
+		if (configd_ds_changed(ds) == EXIT_FAILURE) {
+			rep = nc_reply_ok();
+			return rep;
+		}
 		buf = configd_validate(&configd_ds->conn, &err);
 		if (buf == NULL) {
 			rep = configd_ds_build_reply_error(
@@ -891,6 +892,38 @@ static nc_reply* configd_ds_validate(struct configd_ds *ds, const nc_rpc * rpc)
 		}
 		configd_error_free(&err);
 		free(buf);
+		break;
+	case NC_DATASTORE_CONFIG:
+
+		config = configd_get_rpc_config(rpc, &e);
+		if (config == NULL) {
+			return rep;
+		}
+
+		if ((config_doc = xmlReadMemory(
+			config, strlen(config), NULL, NULL, XMLREAD_OPTIONS)) == NULL) {
+			free(config);
+			return rep;
+		}
+		xmlChar *validate_config = NULL;
+		xmlDocDumpMemory(config_doc, &validate_config, NULL);
+
+		char *result = configd_validate_config(
+			&configd_ds->conn,
+			"xml",
+			(const char *)validate_config,
+			&err);
+		if (!result) {
+			rep = configd_ds_build_reply_error(
+				&err, NC_ERR_OP_FAILED,
+				"copy-config operation failed");
+		} else {
+			rep = nc_reply_ok();
+		}
+		configd_error_free(&err);
+		xmlFree(validate_config);
+		xmlFreeDoc(config_doc);
+		free(config);
 		break;
 	default:
 		/*The error is freed when reply is sent*/
