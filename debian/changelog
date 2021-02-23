@@ -1,3 +1,15 @@
+netconfd (0.26) unstable; urgency=medium
+
+  [ Duncan Eastoe ]
+  * Use configd_sess_setup_shared() to create session
+
+  [ William Ivory ]
+  * Add support for CopyConfig
+  * Reject copy-config requests with same source and target datastores
+    (Fixes: VRVDR-54090)
+
+ -- William Ivory <william.ivory@intl.att.com>  Tue, 23 Feb 2021 13:48:59 +0000
+
 netconfd (0.25) unstable; urgency=medium
 
   * Autosave reformatting for configd_datastore.c
