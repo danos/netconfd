@@ -1,3 +1,11 @@
+netconfd (0.25.2) unstable; urgency=medium
+
+  * Add support for CopyConfig
+  * Reject copy-config requests with same source and target datastores
+    (Fixes: VRVDR-54090)
+
+ -- William Ivory <william.ivory@intl.att.com>  Thu, 04 Mar 2021 17:37:12 +0000
+
 netconfd (0.25.1) unstable; urgency=medium
 
   [ Duncan Eastoe ]
