@@ -80,7 +80,7 @@ char *configd_strdup(char *src)
 	}
 
 	bzero(ret_str, len + 1);
-	strncpy(ret_str, src, len);
+	strcpy(ret_str, src);
 
 	return ret_str;
 }
