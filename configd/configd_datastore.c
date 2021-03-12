@@ -783,6 +783,7 @@ static nc_reply *configd_ds_copyconfig(
 			char *result = configd_copy_config(
 				&configd_ds->conn,
 				"",
+				"xml",
 				(const char *)copy_config,
 				"",
 				"candidate",
