@@ -6,9 +6,11 @@ CHECK_SUBDIRS := test
 
 INCDIR := -I /usr/include/libxml2
 
+CC := clang
+
 LDFLAGS += -lnetconf
 
-CFLAGS += $(INCDIR) -DDISABLE_NOTIFICATIONS -D_GNU_SOURCE --std=c99 -ggdb -Wall -Wextra -Werror
+CFLAGS += $(INCDIR) -D_GNU_SOURCE --std=c99 -ggdb -Wall -Wextra -Werror -fdebug-prefix-map=/usr/src/packages/BUILD=.
 TEST_CFLAGS += $(INCDIR) -Wall -Wextra -Werror
 
 SRCS := configd/configd_datastore.c configd/configd_path.c configd/configd_xml_utils.c main.c

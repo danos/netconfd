@@ -44,7 +44,12 @@ void test_check_configd_gets_correct_filter(void)
 	rpc = nc_rpc_build(test_rpc, NULL);
 
 	// configd_get_schemas() would malloc this.
-	schema_retval = (char *)malloc(32);
+	const char *schemas = "<schemas><schema><identifier>vyatta-policy-qos-v1"
+		"</identifier><version>2014-12-29</version><format>yang</format>"
+		"<namespace>urn:vyatta.com:test:vyatta-policy-qos-v1</namespace>"
+		"<location>NETCONF</location></schema></schemas>";
+	schema_retval = (char *)malloc(strlen(schemas + 1));
+	strcpy(schema_retval, schemas);
 
 	mock_c()->expectOneCall("configd_get_schemas")
 		->andReturnStringValue(schema_retval);
@@ -76,4 +81,7 @@ void test_check_configd_gets_correct_filter(void)
 		cfgd_ds,
 		rpc);
 	nc_reply_free(reply);
+
+	mock_c()->checkExpectations();
+	mock_c()->clear();
 }

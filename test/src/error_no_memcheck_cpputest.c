@@ -84,6 +84,9 @@ void test_edit_config_fail()
 	CHECK_EQUAL_C_INT(NC_REPLY_ERROR, nc_reply_get_type(reply));
 	CHECK_EQUAL_C_STRING("MESSAGE_VALUE", nc_reply_get_errormsg(reply));
 
+	mock_c()->checkExpectations();
+	mock_c()->clear();
+
 	free(errlist[0]);
 	free(errlist);
 }
@@ -133,6 +136,9 @@ void test_get_fail_direct()
 
 	CHECK_EQUAL_C_INT(NC_REPLY_ERROR, nc_reply_get_type(reply));
 	CHECK_EQUAL_C_STRING("MESSAGE_VALUE", nc_reply_get_errormsg(reply));
+
+	mock_c()->checkExpectations();
+	mock_c()->clear();
 
 	free(errlist[0]);
 	free(errlist);
@@ -189,6 +195,9 @@ void test_copy_config_fail()
 	// mock_nc_err_from_mgmt_err_call()
 	CHECK_EQUAL_C_INT(NC_REPLY_ERROR, nc_reply_get_type(reply));
 	CHECK_EQUAL_C_STRING("MESSAGE_VALUE", nc_reply_get_errormsg(reply));
+
+	mock_c()->checkExpectations();
+	mock_c()->clear();
 
 	free(errlist[0]);
 	free(errlist);

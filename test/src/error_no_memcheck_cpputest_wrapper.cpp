@@ -19,12 +19,15 @@ TEST_GROUP(error_no_memcheck)
 {
 	void setup()
 	{
-		MemoryLeakWarningPlugin::turnOffNewDeleteOverloads();
+		//Appears with Debian 11 rework that we no longer need to disable
+		//memory leak detection. However, this is a brittle area so leaving
+		//infrastructure in place, commented out, just in case.
+		//MemoryLeakWarningPlugin::saveAndDisableNewDeleteOverloads();
 	}
 
 	void teardown()
 	{
-		MemoryLeakWarningPlugin::turnOnNewDeleteOverloads();
+		//MemoryLeakWarningPlugin::restoreNewDeleteOverloads();
 	}
 
 	void dummyFunctionToKeepVSCodeFormattingHappy();

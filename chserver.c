@@ -15,6 +15,13 @@
 #include <libnetconf.h>
 #include <libnetconf_ssh.h>
 
+#include <libxml/tree.h>
+#include <libxml/xpath.h>
+#include <libxml/xpathInternals.h>
+#include <vyatta-cfg/client/mgmt.h>
+#include <vyatta-util/map.h>
+
+
 extern char *program_invocation_short_name;
 
 #ifdef __GNUC__
