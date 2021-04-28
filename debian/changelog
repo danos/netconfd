@@ -1,3 +1,10 @@
+netconfd (0.25.3) unstable; urgency=medium
+
+  * CopyConfig API supports selectable encoding
+  * Support <validate> with config source (Closes: VRVDR-52942)
+
+ -- Paul Carson <paul.carson@intl.att.com>  Wed, 28 Apr 2021 14:16:09 +0100
+
 netconfd (0.25.2) unstable; urgency=medium
 
   * Add support for CopyConfig
