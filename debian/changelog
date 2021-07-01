@@ -1,3 +1,17 @@
+netconfd (0.27) unstable; urgency=medium
+
+  [ Nicholas Brown ]
+  * Fix gcc 10 compiler error
+
+  [ Paul Carson ]
+  * CopyConfig API supports selectable encoding
+  * Support <validate> with config source (Closes: VRVDR-52942)
+
+  [ William Ivory ]
+  * Fix bullseye build errors
+
+ -- Paul Carson <paul.carson@intl.att.com>  Thu, 01 Jul 2021 14:06:22 +0100
+
 netconfd (0.26) unstable; urgency=medium
 
   [ Duncan Eastoe ]
